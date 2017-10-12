@@ -4,6 +4,7 @@
 #include "master_base.hpp"
 
 struct ACL_VSTREAM;
+struct ACL_VSTRING;
 
 namespace acl {
 
@@ -44,6 +45,12 @@ public:
 	 * 在 run_alone 模式下，通知服务器框架关闭引擎，退出程序
 	 */
 	void stop();
+
+	/**
+	 * 获得配置文件路径
+	 * @return {const char*} 返回值为 NULL 表示没有设配置文件
+	 */
+	const char* get_conf_path(void) const;
 
 protected:
 	master_aio();
@@ -87,7 +94,7 @@ private:
 	static void service_exit(void*);
 
 	// 当进程收到 SIGHUP 信号后会回调本函数
-	static void service_on_sighup(void*);
+	static int service_on_sighup(void*, ACL_VSTRING*);
 };
 
 }  // namespace acl

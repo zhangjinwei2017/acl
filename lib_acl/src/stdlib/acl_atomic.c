@@ -121,7 +121,7 @@ void acl_atomic_int64_set(ACL_ATOMIC *self, long long n)
 {
 #ifndef HAS_ATOMIC
 	acl_pthread_mutex_lock(&self->lock);
-	*self->value = n;
+	*((long long *) self->value) = n;
 	acl_pthread_mutex_unlock(&self->lock);
 #elif	defined(ACL_WINDOWS)
 	InterlockedExchangePointer((volatile PVOID*) self->value, n);
@@ -182,6 +182,24 @@ long long acl_atomic_int64_add_fetch(ACL_ATOMIC *self, long long n)
 		__FILE__, __LINE__, __FUNCTION__);
 	return -1;
 # endif
+#endif
+}
+
+long long acl_atomic_int64_cas(ACL_ATOMIC *self, long long cmp, long long n)
+{
+#if !defined(HAS_ATOMIC)
+	acl_pthread_mutex_lock(&self->lock);
+	long long old = *(long long *) self->value;
+	if (old == cmp)
+		*((long long *) self->value) = n;
+	acl_pthread_mutex_unlock(&self->lock);
+	return old;
+#elif	defined(ACL_WINDOWS)
+	return InterlockedCompareExchange64((volatile LONGLONG*)&self->value,
+			n, cmp);
+#else
+	return (long long) __sync_val_compare_and_swap(
+			(long long*) self->value, cmp, n);
 #endif
 }
 

@@ -3,6 +3,7 @@
 
 struct ACL_VSTREAM;
 struct ACL_EVENT;
+struct ACL_VSTRING;
 
 namespace acl {
 
@@ -32,6 +33,12 @@ public:
 	 */
 	bool run_alone(const char* addrs, const char* path = NULL, int count = 1);
 
+	/**
+	 * 获得配置文件路径
+	 * @return {const char*} 返回值为 NULL 表示没有设配置文件
+	 */
+	const char* get_conf_path(void) const;
+
 protected:
 	master_proc();
 	virtual ~master_proc();
@@ -60,7 +67,7 @@ private:
 	static void service_exit(void*);
 
 	// 当进程收到 SIGHUP 信号后会回调本函数
-	static void service_on_sighup(void*);
+	static int service_on_sighup(void*, ACL_VSTRING*);
 
 private:
 	// 在单独运行方式下，该函数当监听套接字有新连接到达时被调用

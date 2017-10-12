@@ -2,6 +2,7 @@
 #ifndef ACL_PREPARE_COMPILE
 #include "acl_cpp/stdlib/log.hpp"
 #include "acl_cpp/stdlib/util.hpp"
+#include "acl_cpp/stdlib/string.hpp"
 #include "acl_cpp/stream/socket_stream.hpp"
 #include "acl_cpp/master/master_udp.hpp"
 #endif
@@ -54,6 +55,19 @@ void master_udp::run_daemon(int argc, char** argv)
 
 	run(argc, argv);
 #endif
+}
+
+const char* master_udp::get_conf_path(void) const
+{
+#ifndef ACL_WINDOWS
+	if (daemon_mode_)
+	{
+		const char* ptr = acl_udp_server_conf();
+		return ptr && *ptr ? ptr : NULL;
+	}
+	else
+#endif
+		return conf_.get_path();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -158,11 +172,15 @@ void master_udp::service_on_bind(void* ctx, ACL_VSTREAM* stream)
 	mu->proc_on_bind(*ss);
 }
 
-void master_udp::service_on_sighup(void* ctx)
+int master_udp::service_on_sighup(void* ctx, ACL_VSTRING* buf)
 {
 	master_udp* mu = (master_udp *) ctx;
 	acl_assert(mu);
-	mu->proc_on_sighup();
+	string s;
+	bool ret = mu->proc_on_sighup(s);
+	if (buf)
+		acl_vstring_strcpy(buf, s.c_str());
+	return ret ? 0 : -1;
 }
 
 }  // namespace acl

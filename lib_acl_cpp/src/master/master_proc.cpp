@@ -2,6 +2,7 @@
 #ifndef ACL_PREPARE_COMPILE
 #include "acl_cpp/stdlib/log.hpp"
 #include "acl_cpp/stdlib/util.hpp"
+#include "acl_cpp/stdlib/string.hpp"
 #include "acl_cpp/stream/server_socket.hpp"
 #include "acl_cpp/stream/socket_stream.hpp"
 #include "acl_cpp/master/master_proc.hpp"
@@ -39,6 +40,19 @@ void master_proc::run_daemon(int argc, char** argv)
 		ACL_MASTER_SERVER_INT64_TABLE, conf_.get_int64_cfg(),
 		0);
 #endif
+}
+
+const char* master_proc::get_conf_path(void) const
+{
+#ifndef ACL_WINDOWS
+	if (daemon_mode_)
+	{
+		const char* ptr = acl_single_server_conf();
+		return ptr && *ptr ? ptr : NULL;
+	}
+	else
+#endif
+		return conf_.get_path();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -192,11 +206,15 @@ void master_proc::service_on_listen(void* ctx, ACL_VSTREAM* sstream)
 	mp->proc_on_listen(*ss);
 }
 
-void master_proc::service_on_sighup(void* ctx)
+int master_proc::service_on_sighup(void* ctx, ACL_VSTRING* buf)
 {
 	master_proc* mp = (master_proc *) ctx;
 	acl_assert(mp != NULL);
-	mp->proc_on_sighup();
+	string s;
+	bool ret = mp->proc_on_sighup(s);
+	if (buf)
+		acl_vstring_strcpy(buf, s.c_str());
+	return ret ? 0 : -1;
 }
 
 }  // namespace acl

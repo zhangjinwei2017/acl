@@ -1,10 +1,12 @@
 #include "stdafx.h"
 #include <errno.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 
 /* Application-specific. */
 
+#include "master_api.h"
 #include "master_params.h"
 #include "master.h"
 
@@ -59,8 +61,26 @@ void    acl_master_service_start(ACL_MASTER_SERV *serv)
 	acl_msg_info("%s: service started!", myname);
 }
 
-/* acl_master_service_stop - deactivate service */
+/* acl_master_service_kill - deactivate service */
 
+void    acl_master_service_kill(ACL_MASTER_SERV *serv)
+{
+	/* set killed flag to avoid prefork process */
+	serv->flags |= ACL_MASTER_FLAG_KILLED;
+
+	/*
+	 * Undo the things that master_service_start() did.
+	 */
+	acl_master_wakeup_cleanup(serv);
+	acl_master_status_cleanup(serv);
+
+	acl_master_avail_cleanup(serv);
+
+	acl_master_listen_cleanup(serv);
+	acl_master_kill_children(serv);  /* XXX calls master_avail_listen */
+}
+
+/* acl_master_service_stop - close IPC with children only */
 void    acl_master_service_stop(ACL_MASTER_SERV *serv)
 {
 	/* set STOPPING flag to avoid prefork process */
@@ -83,15 +103,32 @@ void    acl_master_service_restart(ACL_MASTER_SERV *serv)
 	acl_master_wakeup_cleanup(serv);
 	acl_master_status_cleanup(serv);
 
-	/* Now undo the undone. */
-	acl_master_status_init(serv);
-
 	/* set ACL_MASTER_FLAG_RELOADING flag */
 	serv->flags |= ACL_MASTER_FLAG_RELOADING;
 
-	acl_master_avail_listen(serv);
+	/* if master_stop_kill was set then kill the children with SIGTERM */
+	if ((serv->flags & ACL_MASTER_FLAG_STOP_KILL) != 0) {
+		ACL_BINHASH_INFO **list;
+		ACL_BINHASH_INFO **info;
+		ACL_MASTER_PROC   *proc;
+
+		acl_msg_info("kill service %s with SIGTERM", serv->conf);
+
+		info = list = acl_binhash_list(acl_var_master_child_table);
+		for (; *info; info++) {
+			proc = (ACL_MASTER_PROC *) info[0]->value;
+			if (proc->serv == serv)
+				(void) kill(proc->pid, SIGTERM);
+		}
+		acl_myfree(list);
+	}
+
+	/* Now undo the undone. */
+	acl_master_status_init(serv);
+
+	/* re-listen again or prefork children */
+	acl_master_avail_listen_force(serv);
 
 	/* ACL_MASTER_FLAG_RELOADING will be remove in acl_master_spawn */
-
 	acl_master_wakeup_init(serv);
 }

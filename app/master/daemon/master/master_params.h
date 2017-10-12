@@ -19,6 +19,10 @@ extern char *acl_var_master_conf_dir;
 #define ACL_DEF_MASTER_INET_INTERFACES	ACL_INET_INTERFACES_ALL
 extern char *acl_var_master_inet_interfaces;
 
+#define ACL_VAR_MASTER_STOP_KILL		"stop_kill"
+#define ACL_DEF_MASTER_STOP_KILL		"true"
+extern char *acl_var_master_stop_kill;
+
 #define ACL_VAR_MASTER_PROC_LIMIT		"default_process_limit"
 #define ACL_DEF_MASTER_PROC_LIMIT		100
 extern int acl_var_master_proc_limit;    
@@ -101,6 +105,10 @@ extern int   acl_var_master_delay_usec;
 #define ACL_DEF_MASTER_MANAGE_ADDR		""
 extern char *acl_var_master_manage_addr;
 
+#define ACL_VAR_MASTER_RELOAD_TIMEO		"reload_timeout"
+#define ACL_DEF_MASTER_RELOAD_TIMEO		5000
+extern int   acl_var_master_reload_timeo;
+
 /* every service's configure entry is different*/
 
 #define	ACL_VAR_MASTER_SERV_DISABLE		"master_disable"
@@ -129,6 +137,12 @@ extern char *acl_var_master_manage_addr;
 
 #define	ACL_VAR_MASTER_SERV_DEFER_ACCEPT	"master_defer_accept"
 #define	ACL_DEF_MASTER_SERV_DEFER_ACCEPT	"0"
+
+#define ACL_VAR_MASTER_SERV_REUSEPORT		"master_reuseport"
+#define ACL_VAR_MASTER_SERV_FASTOPEN		"master_fastopen"
+#define ACL_VAR_MASTER_SERV_NBLOCK		"master_nonblock"
+#define ACL_VAR_MASETR_SERV_STOP_KILL		"master_stop_kill"
+#define ACL_VAR_MASTER_SERV_STOP_WAIT		"master_stop_wait"
 
 /**
  * master_params.c

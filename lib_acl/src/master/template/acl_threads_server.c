@@ -180,6 +180,7 @@ static ACL_EVENT *__event = NULL;
 static acl_pthread_pool_t *__threads = NULL;
 static ACL_VSTREAM **__sstreams;
 
+static int    __threads_server_generation;
 static time_t __last_closing_time = 0;
 static acl_pthread_mutex_t __closing_time_mutex;
 static acl_pthread_mutex_t __counter_mutex;
@@ -198,6 +199,7 @@ static ACL_MASTER_SERVER_EXIT_TIMER_FN	__server_exit_timer;
 static ACL_MASTER_SERVER_SIGHUP_FN      __sighup_handler;
 
 static char *__deny_info = NULL;
+static char  __conf_file[1024];
 
 static void dispatch_close(ACL_EVENT *event);
 static void dispatch_open(ACL_EVENT *event, acl_pthread_pool_t *threads);
@@ -263,6 +265,11 @@ static int get_client_count(void)
 	unlock_counter();
 
 	return n;
+}
+
+const char *acl_threads_server_conf(void)
+{
+	return __conf_file;
 }
 
 ACL_EVENT *acl_threads_server_event(void)
@@ -546,7 +553,7 @@ static void thread_callback(void *arg)
 		if (ctx->serv_close != NULL)
 			ctx->serv_close(ctx->serv_arg, ctx->stream);
 		acl_vstream_close(ctx->stream);
-	} else if (ctx->serv_timeout(ctx->stream, ctx->serv_arg) < 0) {
+	} else if (ctx->serv_timeout(ctx->serv_arg, ctx->stream) < 0) {
 		if (ctx->serv_close != NULL)
 			ctx->serv_close(ctx->serv_arg, ctx->stream);
 		acl_vstream_close(ctx->stream);
@@ -728,7 +735,11 @@ static void server_accept_sock(int event_type, ACL_EVENT *event,
 
 	while (i++ < acl_var_threads_max_accept) {
 		fd = acl_accept(listen_fd, remote, sizeof(remote), &sock_type);
+#ifdef ACL_WINDOWS
+		if (fd != ACL_SOCKET_INVALID) {
+#else
 		if (fd >= 0) {
+#endif
 			/* set NODELAY for TCP socket */
 #ifdef AF_INET6
 			if (sock_type == AF_INET || sock_type == AF_INET6)
@@ -1213,7 +1224,7 @@ void acl_threads_server_main(int argc, char * argv[],
 	ACL_THREADS_SERVER_FN service, void *service_ctx, int name, ...)
 {
 	const char *myname = "acl_threads_server_main";
-	char *root_dir = NULL, *user = NULL, *addrs = NULL, conf_file[1024];
+	char *root_dir = NULL, *user = NULL, *addrs = NULL;
 	const char *service_name = acl_safe_basename(argv[0]);
 	int   c, fdtype = 0, event_mode, socket_count = 1;
 	void *thread_init_ctx = NULL, *thread_exit_ctx = NULL;
@@ -1221,11 +1232,15 @@ void acl_threads_server_main(int argc, char * argv[],
 	ACL_MASTER_SERVER_INIT_FN post_init = NULL;
 	ACL_MASTER_SERVER_THREAD_INIT_FN thread_init_fn = NULL;
 	ACL_MASTER_SERVER_THREAD_EXIT_FN thread_exit_fn = NULL;
+	ACL_VSTRING *buf = acl_vstring_alloc(128);
+#ifdef ACL_UNIX
+	const char  *generation;
+#endif
 	va_list ap;
 
 	/*******************************************************************/
 
-#ifdef ACL_UNIX
+#if	defined(ACL_LINUX)
 	opterr = 0;
 	optind = 0;
 	optarg = 0;
@@ -1241,7 +1256,7 @@ void acl_threads_server_main(int argc, char * argv[],
 	 * messages to stderr, because no-one is going to see them.
 	 */
 
-	conf_file[0] = 0;
+	__conf_file[0] = 0;
 
 	while ((c = getopt(argc, argv, "hc:n:s:t:uvf:L:")) > 0) {
 		switch (c) {
@@ -1250,7 +1265,7 @@ void acl_threads_server_main(int argc, char * argv[],
 			exit (0);
 		case 'f':
 			acl_app_conf_load(optarg);
-			ACL_SAFE_STRNCPY(conf_file, optarg, sizeof(conf_file));
+			snprintf(__conf_file, sizeof(__conf_file), "%s", optarg);
 			break;
 		case 'c':
 			root_dir = "setme";
@@ -1278,12 +1293,12 @@ void acl_threads_server_main(int argc, char * argv[],
 		}
 	}
 
-	if (conf_file[0] == 0)
+	if (__conf_file[0] == 0)
 		acl_msg_info("%s(%d)->%s: no configure file",
 			__FILE__, __LINE__, myname);
 	else
 		acl_msg_info("%s(%d)->%s: configure file = %s", 
-			__FILE__, __LINE__, myname, conf_file);
+			__FILE__, __LINE__, myname, __conf_file);
 
 	if (addrs && *addrs)
 		__daemon_mode = 0;
@@ -1395,6 +1410,15 @@ void acl_threads_server_main(int argc, char * argv[],
 	else
 		event_mode = ACL_EVENT_SELECT;
 
+#ifdef ACL_UNIX
+	/* Retrieve process generation from environment. */
+	if ((generation = getenv(ACL_MASTER_GEN_NAME)) != 0) {
+		if (!acl_alldig(generation))
+			acl_msg_fatal("bad generation: %s", generation);
+		sscanf(generation, "%o", &__threads_server_generation);
+	}
+#endif
+
 	/*******************************************************************/
 
 	/* Set up call-back info. */
@@ -1461,17 +1485,28 @@ void acl_threads_server_main(int argc, char * argv[],
 #endif
 
 	acl_server_sighup_setup();
+	acl_server_sigterm_setup();
 
 	acl_msg_info("%s(%d), %s daemon started, log: %s",
 		myname, __LINE__, argv[0], acl_var_threads_log_file);
 
 	while (1) {
 		acl_event_loop(__event);
-
-		if (acl_var_server_gotsighup) {
+#ifdef ACL_UNIX
+		if (acl_var_server_gotsighup && __sighup_handler) {
 			acl_var_server_gotsighup = 0;
-			if (__sighup_handler)
-				__sighup_handler(__service_ctx);
+			if (__sighup_handler(__service_ctx, buf) < 0)
+				acl_master_notify(acl_var_threads_pid,
+					__threads_server_generation,
+					ACL_MASTER_STAT_SIGHUP_ERR);
+			else
+				acl_master_notify(acl_var_threads_pid,
+					__threads_server_generation,
+					ACL_MASTER_STAT_SIGHUP_OK);
 		}
+#endif
 	}
+
+    /* not reached here */
+	/* acl_vstring_free(buf); */
 }

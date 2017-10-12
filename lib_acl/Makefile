@@ -68,6 +68,14 @@ endif
 
 ifeq ($(findstring gcc, $(CC)), gcc)
 	CFLAGS += -Wstrict-prototypes
+	GCC_VERSION=$(shell gcc --version | grep ^gcc | sed 's/^.* //g')
+	GCC_MAJOR:=$(shell echo "$(GCC_VERSION)" | cut -d'.' -f1)
+	GCC_MINOR:=$(shell echo "$(GCC_VERSION)" | cut -d'.' -f2)
+	GCC_SUB:=$(shell echo "$(GCC_VERSION)" | cut -d'.' -f3)
+	GCC_VER:=$(shell [ $(GCC_MAJOR) -gt 4 -o \( $(GCC_MAJOR) -eq 4 -a $(GCC_MINOR) -gt 4 \) ] && echo true)
+	ifeq ($(GCC_VER), true)
+		CFLAGS += -Wno-implicit-fallthrough
+	endif
 endif
 
 ifeq ($(findstring clang, $(CC)), clang)
@@ -277,7 +285,7 @@ OBJS_DEF     = $(INIT_DEF) $(PRIV_DEF) $(STDLIB_DEF) \
 		$(JSON_DEF) $(UTEST_DEF)
 
 ###########################################################
-.PHONY = all static shared clean clean_lib rebuild
+.PHONY = all static shared clean cl clean_lib rebuild rb
 
 STATIC_OLD_LIBNAME = lib_acl.a
 SHARED_OLD_LIBNAME = lib_acl.so
@@ -287,12 +295,12 @@ SHARED_LIBNAME = libacl.so
 all: static shared
 
 $(shell mkdir -p $(DEF_PATH_DST))
-ifneq ($(MAKECMDGOALS),clean)
--include $(OBJS_DEF)
-endif
+#ifneq ($(MAKECMDGOALS),clean)
+#-include $(OBJS_DEF)
+#endif
 
-clean: clean_lib
-rebuild: clean all
+clean cl: clean_lib
+rebuild rb: clean all
 
 PCH = StdAfx.h.gch
 
@@ -305,7 +313,8 @@ CREATE_DEF = @(echo 'creating $@'; rm -f $@; \
 	sed 's,.*.o\( \)*:,$(patsubst %.inc,%.o,$@) $@ :,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$)
 
-static: depends $(OBJS_DST)
+#static: depends $(OBJS_DST)
+static: $(OBJS_DST)
 	@echo 'creating $(LIB_PATH_DST)/$(STATIC_LIBNAME)'
 	@$(AR) $(ARFL) $(LIB_PATH_DST)/$(STATIC_LIBNAME) $(OBJS_DST)
 	@$(RANLIB) $(LIB_PATH_DST)/$(STATIC_LIBNAME)
@@ -315,7 +324,8 @@ static: depends $(OBJS_DST)
 
 #shared_ldflags = -lmysqlclient -lrt -lpthread -ldl
 shared_ldflags = -lrt -lpthread -ldl
-shared: depends $(OBJS_DST)
+#shared: depends $(OBJS_DST)
+shared: $(OBJS_DST)
 	@echo ''
 	@echo 'creating $(SHARED_LIBNAME)'
 	@if test -n "$(rpath)" && test "$(UNIXTYPE)" = "LINUX"; then \

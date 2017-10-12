@@ -12,16 +12,18 @@
 
 #include "stdafx.h"
 #include "master/master_api.h"
+#include "manage/http_client.h"
 #include "service_list.h"
 
 void service_list::add_one(list_res_t& res, const ACL_MASTER_SERV* serv)
 {
 	serv_info_t info;
 
-	info.status          = 0;
+	info.status          = 200;
 	info.name            = serv->name;
 	info.type            = serv->type;
 	info.path            = serv->path;
+	info.conf            = serv->conf;
 	info.proc_max        = serv->max_proc;
 	info.proc_prefork    = serv->prefork_proc;
 	info.proc_total      = serv->total_proc;
@@ -37,16 +39,40 @@ void service_list::add_one(list_res_t& res, const ACL_MASTER_SERV* serv)
 		info.notify_recipients = serv->notify_recipients;
 
 	ACL_ITER iter;
-	acl_foreach(iter, serv->children_env)
-	{
+	acl_foreach(iter, serv->children_env) {
 		ACL_MASTER_NV* v = (ACL_MASTER_NV *) iter.data;
 		info.env[v->name] = v->value;
+	}
+
+	ACL_RING_ITER iter2;
+	acl_ring_foreach(iter2, &serv->children) {
+		ACL_MASTER_PROC* proc = (ACL_MASTER_PROC *)
+			acl_ring_to_appl(iter2.ptr, ACL_MASTER_PROC, me);
+		proc_info_t pi;
+		pi.pid = proc->pid;
+		pi.start = proc->start;
+		info.procs.push_back(pi);
 	}
 
 	res.data.push_back(info);
 }
 
-bool service_list::run(const list_req_t&, list_res_t& res)
+bool service_list::run(acl::json& json)
+{
+	list_req_t req;
+	list_res_t res;
+
+	if (deserialize<list_req_t>(json, req) == false) {
+		res.status = 400;
+		res.msg    = "invalid json";
+		client_.reply<list_res_t>(res.status, res);
+		return false;
+	}
+
+	return handle(req, res);
+}
+
+bool service_list::handle(const list_req_t&, list_res_t& res)
 {
 	ACL_MASTER_SERV *serv;
 
@@ -55,6 +81,9 @@ bool service_list::run(const list_req_t&, list_res_t& res)
 
 	res.status = 200;
 	res.msg    = "ok";
+
+	client_.reply<list_res_t>(res.status, res);
+	client_.on_finish();
 
 	return true;
 }

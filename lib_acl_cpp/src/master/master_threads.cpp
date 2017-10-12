@@ -1,6 +1,7 @@
 #include "acl_stdafx.hpp"
 #ifndef ACL_PREPARE_COMPILE
 #include "acl_cpp/stdlib/log.hpp"
+#include "acl_cpp/stdlib/string.hpp"
 #include "acl_cpp/stream/socket_stream.hpp"
 #include "acl_cpp/stream/server_socket.hpp"
 #include "acl_cpp/master/master_threads.hpp"
@@ -40,6 +41,17 @@ void master_threads::run(int argc, char** argv)
 		ACL_MASTER_SERVER_INT_TABLE, conf_.get_int_cfg(),
 		ACL_MASTER_SERVER_STR_TABLE, conf_.get_str_cfg(),
 		ACL_MASTER_SERVER_END);
+}
+
+const char* master_threads::get_conf_path(void) const
+{
+	if (daemon_mode_)
+	{
+		const char* ptr = acl_threads_server_conf();
+		return ptr && *ptr ? ptr : NULL;
+	}
+	else
+		return conf_.get_path();
 }
 
 void master_threads::run_daemon(int argc, char** argv)
@@ -308,11 +320,15 @@ void master_threads::service_on_close(void* ctx, ACL_VSTREAM* client)
 	delete stream;
 }
 
-void master_threads::service_on_sighup(void* ctx)
+int master_threads::service_on_sighup(void* ctx, ACL_VSTRING* buf)
 {
 	master_threads* mt = (master_threads *) ctx;
 	acl_assert(mt);
-	mt->proc_on_sighup();
+	string s;
+	bool ret = mt->proc_on_sighup(s);
+	if (buf)
+		acl_vstring_strcpy(buf, s.c_str());
+	return ret ? 0 : -1;
 }
 
 }  // namespace acl

@@ -89,7 +89,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>.\include;..\lib_acl\include;..\lib_protocol\include;..\include\sqlite;..\include\zlib;..\include\mysql;..\include\pgsql;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_MT;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_MT;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;HAS_POLARSSL_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -113,7 +113,7 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y</Command>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>.\include;..\lib_acl\include;..\lib_protocol\include;..\include\sqlite;..\include\zlib;..\include\mysql;..\include\pgsql;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;HAS_POLARSSL_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>acl_stdafx.hpp</PrecompiledHeaderFile>
@@ -134,7 +134,7 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y</Command>
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>.\include;..\lib_acl\include;..\lib_protocol\include;..\include\sqlite;..\include\zlib;..\include\mysql;..\include\pgsql;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_MT;ACL_DLL;ACL_CPP_DLL;ACL_CPP_EXPORTS;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;_MT;ACL_DLL;ACL_CPP_DLL;ACL_CPP_EXPORTS;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;HAS_POLARSSL_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -167,7 +167,7 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>.\include;..\lib_acl\include;..\lib_protocol\include;..\include\sqlite;..\include\zlib;..\include\mysql;..\include\pgsql;.\src;..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_MT;ACL_DLL;ACL_CPP_DLL;ACL_CPP_EXPORTS;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;_MT;ACL_DLL;ACL_CPP_DLL;ACL_CPP_EXPORTS;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;HAS_POLARSSL_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -210,6 +210,12 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y
     <ClCompile Include="src\connpool\connect_manager.cpp" />
     <ClCompile Include="src\connpool\connect_monitor.cpp" />
     <ClCompile Include="src\connpool\connect_pool.cpp" />
+    <ClCompile Include="src\connpool\tcp_reader.cpp" />
+    <ClCompile Include="src\connpool\tcp_sender.cpp" />
+    <ClCompile Include="src\connpool\tcp_client.cpp" />
+    <ClCompile Include="src\connpool\tcp_pool.cpp" />
+    <ClCompile Include="src\connpool\tcp_manager.cpp" />
+    <ClCompile Include="src\connpool\tcp_ipc.cpp" />
     <ClCompile Include="src\db\db_handle.cpp" />
     <ClCompile Include="src\db\db_mysql.cpp" />
     <ClCompile Include="src\db\db_pgsql.cpp" />
@@ -230,6 +236,7 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y
     <ClCompile Include="src\disque\disque.cpp" />
     <ClCompile Include="src\disque\disque_cond.cpp" />
     <ClCompile Include="src\disque\disque_job.cpp" />
+    <ClCompile Include="src\event\event_mutex.cpp" />
     <ClCompile Include="src\event\event_timer.cpp" />
     <ClCompile Include="src\hsocket\hsclient.cpp" />
     <ClCompile Include="src\hsocket\hserror.cpp" />
@@ -329,6 +336,8 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y
     <ClCompile Include="src\smtp\mail_body.cpp" />
     <ClCompile Include="src\smtp\mail_message.cpp" />
     <ClCompile Include="src\smtp\smtp_client.cpp" />
+    <ClCompile Include="src\stdlib\atomic.cpp" />
+    <ClCompile Include="src\stdlib\bitmap.cpp" />
     <ClCompile Include="src\stdlib\charset_conv.cpp" />
     <ClCompile Include="src\stdlib\dbuf_pool.cpp" />
     <ClCompile Include="src\stdlib\dns_service.cpp" />
@@ -346,8 +355,11 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y
     <ClCompile Include="src\stdlib\snprintf.cpp" />
     <ClCompile Include="src\stdlib\string.cpp" />
     <ClCompile Include="src\stdlib\thread.cpp" />
+    <ClCompile Include="src\stdlib\thread_cond.cpp" />
+    <ClCompile Include="src\stdlib\thread_mutex.cpp" />
     <ClCompile Include="src\stdlib\thread_pool.cpp" />
     <ClCompile Include="src\stdlib\thread_queue.cpp" />
+    <ClCompile Include="src\stdlib\trigger.cpp" />
     <ClCompile Include="src\stdlib\url_coder.cpp" />
     <ClCompile Include="src\stdlib\util.cpp" />
     <ClCompile Include="src\stdlib\xml.cpp" />
@@ -388,6 +400,12 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y
     <ClInclude Include="include\acl_cpp\connpool\connect_manager.hpp" />
     <ClInclude Include="include\acl_cpp\connpool\connect_monitor.hpp" />
     <ClInclude Include="include\acl_cpp\connpool\connect_pool.hpp" />
+    <ClInclude Include="include\acl_cpp\connpool\tcp_reader.hpp" />
+    <ClInclude Include="include\acl_cpp\connpool\tcp_sender.hpp" />
+    <ClInclude Include="include\acl_cpp\connpool\tcp_client.hpp" />
+    <ClInclude Include="include\acl_cpp\connpool\tcp_pool.hpp" />
+    <ClInclude Include="include\acl_cpp\connpool\tcp_manager.hpp" />
+    <ClInclude Include="include\acl_cpp\connpool\tcp_ipc.hpp" />
     <ClInclude Include="include\acl_cpp\db\db_handle.hpp" />
     <ClInclude Include="include\acl_cpp\db\db_mysql.hpp" />
     <ClInclude Include="include\acl_cpp\db\db_pgsql.hpp" />
@@ -409,6 +427,7 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y
     <ClInclude Include="include\acl_cpp\disque\disque_cond.hpp" />
     <ClInclude Include="include\acl_cpp\disque\disque_job.hpp" />
     <ClInclude Include="include\acl_cpp\disque\disque_node.hpp" />
+    <ClInclude Include="include\acl_cpp\event\event_mutex.hpp" />
     <ClInclude Include="include\acl_cpp\event\event_timer.hpp" />
     <ClInclude Include="include\acl_cpp\hsocket\hsclient.hpp" />
     <ClInclude Include="include\acl_cpp\hsocket\hserror.hpp" />
@@ -497,6 +516,8 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y
     <ClInclude Include="include\acl_cpp\smtp\mail_body.hpp" />
     <ClInclude Include="include\acl_cpp\smtp\mail_message.hpp" />
     <ClInclude Include="include\acl_cpp\smtp\smtp_client.hpp" />
+    <ClInclude Include="include\acl_cpp\stdlib\atomic.hpp" />
+    <ClInclude Include="include\acl_cpp\stdlib\bitmap.hpp" />
     <ClInclude Include="include\acl_cpp\stdlib\charset_conv.hpp" />
     <ClInclude Include="include\acl_cpp\stdlib\dbuf_pool.hpp" />
     <ClInclude Include="include\acl_cpp\stdlib\dns_service.hpp" />
@@ -516,6 +537,8 @@ copy $(TargetName).pdb ..\dist\lib\win32\$(TargetName).pdb /Y
     <ClInclude Include="include\acl_cpp\stdlib\snprintf.hpp" />
     <ClInclude Include="include\acl_cpp\stdlib\string.hpp" />
     <ClInclude Include="include\acl_cpp\stdlib\thread.hpp" />
+    <ClInclude Include="include\acl_cpp\stdlib\thread_cond.hpp" />
+    <ClInclude Include="include\acl_cpp\stdlib\thread_mutex.hpp" />
     <ClInclude Include="include\acl_cpp\stdlib\thread_pool.hpp" />
     <ClInclude Include="include\acl_cpp\stdlib\thread_queue.hpp" />
     <ClInclude Include="include\acl_cpp\stdlib\url_coder.hpp" />

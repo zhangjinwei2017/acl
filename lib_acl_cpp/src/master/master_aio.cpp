@@ -2,6 +2,7 @@
 #ifndef ACL_PREPARE_COMPILE
 #include "acl_cpp/stdlib/log.hpp"
 #include "acl_cpp/stdlib/util.hpp"
+#include "acl_cpp/stdlib/string.hpp"
 #include "acl_cpp/stream/server_socket.hpp"
 #include "acl_cpp/stream/aio_handle.hpp"
 #include "acl_cpp/stream/aio_socket_stream.hpp"
@@ -51,6 +52,19 @@ void master_aio::run_daemon(int argc, char** argv)
 #else
 	logger_fatal("no support win32 yet!");
 #endif
+}
+
+const char* master_aio::get_conf_path(void) const
+{
+#ifndef ACL_WINDOWS
+	if (daemon_mode_)
+	{
+		const char* ptr = acl_aio_server_conf();
+		return ptr && *ptr ? ptr : NULL;
+	}
+	else
+#endif
+		return conf_.get_path();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -224,11 +238,15 @@ void master_aio::service_on_listen(void* ctx, ACL_VSTREAM *sstream)
 	ma->proc_on_listen(*ss);
 }
 
-void master_aio::service_on_sighup(void* ctx)
+int master_aio::service_on_sighup(void* ctx, ACL_VSTRING* buf)
 {
 	master_aio* ma = (master_aio *) ctx;
 	acl_assert(ma);
-	ma->proc_on_sighup();
+	string s;
+	bool ret = ma->proc_on_sighup(s);
+	if (buf)
+		acl_vstring_strcpy(buf, s.c_str());
+	return ret ? 0 : -1;
 }
 
 }  // namespace acl

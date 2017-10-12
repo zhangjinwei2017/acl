@@ -1,9 +1,11 @@
 #pragma once
-#include "acl_cpp/acl_cpp_define.hpp"
-#include "acl_cpp/master/master_base.hpp"
-#include "acl_cpp/stream/socket_stream.hpp"
+//#include "acl_cpp/master/master_base.hpp"
+
+struct ACL_VSTREAM;
 
 namespace acl {
+
+class socket_stream;
 
 /**
  * 基于协程方式的网络服务类
@@ -25,6 +27,12 @@ public:
 	 * @param path {const char*} 非 NULL 指定配置文件路径
 	 */
 	bool run_alone(const char* addrs, const char* path = NULL);
+
+	/**
+	 * 获得配置文件路径
+	 * @return {const char*} 返回值为 NULL 表示没有设配置文件
+	 */
+	const char* get_conf_path(void) const;
 
 protected:
 	master_fiber();
@@ -50,7 +58,7 @@ private:
 	static void service_init(void*);
 	static void thread_init(void*); 
 	static void service_exit(void*);
-	static void service_on_sighup(void*);
+	static int  service_on_sighup(void*, ACL_VSTRING*);
 
 	void run(int argc, char** argv);
 };

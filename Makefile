@@ -81,7 +81,8 @@ endif
 .PHONY = check help all_lib all samples all clean install uninstall uninstall_all build_one
 VERSION = 3.3.0
 
-help:
+default: build_one
+help h:
 	@(echo "usage: make help|all|all_lib|all_samples|clean|install|uninstall|uninstall_all|build_one")
 all_lib:
 	@if test "$(polarssl)" = "on"; then \
@@ -90,11 +91,11 @@ all_lib:
 	else \
 		export ENV_FLAGS; \
 	fi
-	@(cd lib_acl; make pch)
+#	@(cd lib_acl; make pch)
 	@(cd lib_acl; make $(MAKE_ARGS))
 	@(cd lib_protocol; make $(MAKE_ARGS))
 	@(cd lib_acl_cpp; make check)
-	@(cd lib_acl_cpp; make pch)
+#	@(cd lib_acl_cpp; make pch)
 	@(cd lib_acl_cpp; make $(MAKE_ARGS))
 	@(cd lib_rpc; make $(MAKE_ARGS))
 all_samples: all_lib
@@ -105,37 +106,51 @@ all_samples: all_lib
 #	@(cd lib_dict; make $(MAKE_ARGS))
 #	@(cd lib_tls; make $(MAKE_ARGS))
 all: all_lib acl_master all_samples
-clean:
+clean cl:
 	@(cd lib_acl; make clean)
 	@(cd lib_protocol; make clean)
 	@(cd lib_acl_cpp; make clean)
+	@(cd lib_fiber; make clean)
 	@(cd lib_rpc; make clean)
 	@(cd unit_test; make clean)
 	@(cd lib_acl/samples; make clean)
 	@(cd lib_protocol/samples; make clean)
+	@(cd app; make clean)
 	@(rm -f libacl_all.a libacl.a)
 	@(rm -f libacl_all.so libacl.so)
 #	@(cd lib_dict; make clean)
 #	@(cd lib_tls; make clean)
 
 acl_master: all_lib
-	@(cd app/master/daemon; make)
+	@(cd app/master/daemon; make $(MAKE_ARGS); make install)
+	@(cd app/master/tools/master_ctld; make $(MAKE_ARGS); make install)
 
 packinstall:
 	@(echo "")
 	@(echo "begin copy file...")
 	$(shell mkdir -p $(INC_ACL)/acl)
 	$(shell mkdir -p $(INC_ACL)/acl_cpp)
+	$(shell mkdir -p $(INC_ACL)/protocol)
+	$(shell mkdir -p $(INC_ACL)/fiber)
 	$(shell mkdir -p $(BIN_PATH)/)
 	$(shell mkdir -p $(LIB_ACL)/)
 	$(shell mkdir -p $(DESTDIR)/opt/soft/acl-master/)
 	$(shell mkdir -p ./dist/master/libexec/$(RPATH))
-	cp -f app/master/daemon/acl_master ./dist/master/libexec/$(RPATH)/
-	(cd dist/master && ./setup.sh $(DESTDIR) /opt/soft/acl-master)
+	$(shell mkdir -p ./dist/master/bin/$(RPATH))
+	@(cd app/master/daemon; make install)
+	@(cd app/master/tools/master_ctld; make install)
+	@(cd lib_fiber; make)
 	cp -f app/master/daemon/acl_master $(BIN_PATH)
+	(cd dist/master && ./setup.sh $(DESTDIR) /opt/soft/acl-master)
 	cp -Rf lib_acl/include/* $(INC_ACL)/acl/
 	cp -Rf lib_acl_cpp/include/acl_cpp/* $(INC_ACL)/acl_cpp/
+	cp -Rf lib_protocol/include/* $(INC_ACL)/protocol/
+	cp -f lib_fiber/c/include/fiber/* $(INC_ACL)/fiber/
+	cp -f lib_fiber/cpp/include/fiber/* $(INC_ACL)/fiber/
 	cp -f libacl_all.a $(LIB_ACL)/libacl_all.a
+	cp -f lib_fiber/lib/libfiber.a $(LIB_ACL)/libfiber.a
+	cp -f lib_fiber/lib/libfiber_cpp.a $(LIB_ACL)/libfiber_cpp.a
+#	cp -f app/master/daemon/acl_master ./dist/master/libexec/$(RPATH)/
 
 install:
 	@(echo "")

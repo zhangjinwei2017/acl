@@ -1,6 +1,8 @@
 #pragma once
 #include "master_base.hpp"
 
+struct ACL_VSTRING;
+
 namespace acl {
 
 class ACL_CPP_API master_udp : public master_base
@@ -55,6 +57,12 @@ protected:
 		return sstreams_;
 	}
 
+	/**
+	 * 获得配置文件路径
+	 * @return {const char*} 返回值为 NULL 表示没有设配置文件
+	 */
+	const char* get_conf_path(void) const;
+
 private:
 	std::vector<socket_stream*> sstreams_;
 
@@ -80,7 +88,7 @@ private:
 	static void thread_init(void*);
 
 	// 当进程收到 SIGHUP 信号后会回调本函数
-	static void service_on_sighup(void*);
+	static int service_on_sighup(void*, ACL_VSTRING*);
 };
 
 } // namespace acl

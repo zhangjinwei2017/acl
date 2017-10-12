@@ -24,35 +24,37 @@ typedef struct ACL_MASTER_ADDR {
   * on demand up to a configurable concurrency limit and/or periodically.
   */
 typedef struct ACL_MASTER_SERV {
-	int     flags;			/* status, features, etc. */
-	char   *name;			/* service endpoint name */
-	char   *owner;			/* service running privilege if not null*/
-	int     type;			/* UNIX-domain, INET, etc. */
-	int     wakeup_time;		/* wakeup interval */
-	int    *listen_fds;		/* incoming requests */
-	int     listen_fd_count;	/* nr of descriptors */
-	int     defer_accept;		/* accept timeout if no data from client */
-	int     max_qlen;		/* max listening qlen */
-	int     max_proc;		/* upper bound on # processes */
-	int     prefork_proc;		/* prefork processes */
-	char   *path;			/* command pathname */
-	char   *notify_addr;		/* warning address when not null */
-	char   *notify_recipients;	/* users warned to */
-	int     avail_proc;		/* idle processes */
-	int     total_proc;		/* number of processes */
-	int     throttle_delay;		/* failure recovery parameter */
-	int     status_fd[2];		/* child status reports */
+	int      flags;			/* status, features, etc. */
+	char    *name;			/* service endpoint name */
+	char    *owner;			/* service running privilege if not null*/
+	long     start;			/* service start running time */
+	int      type;			/* UNIX-domain, INET, etc. */
+	int      wakeup_time;		/* wakeup interval */
+	unsigned inet_flags;		/* listening inet flags */
+	int     *listen_fds;		/* incoming requests */
+	int      listen_fd_count;	/* nr of descriptors */
+	int      defer_accept;		/* accept timeout if no data from client */
+	int      max_qlen;		/* max listening qlen */
+	int      max_proc;		/* upper bound on # processes */
+	int      prefork_proc;		/* prefork processes */
+	char    *path;			/* command pathname */
+	char    *conf;			/* service configure filepath */
+	char    *notify_addr;		/* warning address when not null */
+	char    *notify_recipients;	/* users warned to */
+	int      avail_proc;		/* idle processes */
+	int      total_proc;		/* number of processes */
+	int      throttle_delay;	/* failure recovery parameter */
+	int      status_fd[2];		/* child status reports */
 	ACL_ARGV     *args;		/* argument vector */
 	ACL_ARRAY    *addrs;		/* in which ACL_MASTER_ADDR save */
 	ACL_ARRAY    *children_env;	/* the env array of the children */
 	ACL_VSTREAM **listen_streams;	/* multi-listening stream */
 	ACL_VSTREAM  *status_reader;	/* status stream */
-#if 0
-	struct ACL_BINHASH *children;	/* linkage */
-#endif
 	ACL_RING      children;		/* linkage of children */
 	struct ACL_MASTER_SERV *next;	/* linkage of serv */
 } ACL_MASTER_SERV;
+
+#define ACL_MASTER_CHILDREN_SIZE(s)     acl_ring_size(&s->children)
 
  /*
   * Per-service flag bits. We assume trouble when a child process terminates
@@ -64,9 +66,13 @@ typedef struct ACL_MASTER_SERV {
 #define ACL_MASTER_FLAG_CONDWAKE	(1<<2)	/* wake up if actually used */
 #define	ACL_MASTER_FLAG_RELOADING	(1<<3)	/* the service is reloading */
 #define ACL_MASTER_FLAG_STOPPING	(1<<4)	/* the service is stopping */
+#define ACL_MASTER_FLAG_KILLED          (1<<5)  /* the service is killed */
+#define ACL_MASTER_FLAG_STOP_KILL	(1<<6)  /* the service can be killed on stopping */
+#define ACL_MASTER_FLAG_STOP_WAIT	(1<<7)  /* master waiting service exited */
 
 #define ACL_MASTER_THROTTLED(f)		((f)->flags & ACL_MASTER_FLAG_THROTTLE)
 #define ACL_MASTER_STOPPING(f)		((f)->flags & ACL_MASTER_FLAG_STOPPING)
+#define ACL_MASTER_KILLED(f)		((f)->flags & ACL_MASTER_FLAG_KILLED)
 
 #define ACL_MASTER_LIMIT_OK(limit, count) ((limit) == 0 || ((count) < (limit)))
 
@@ -91,14 +97,19 @@ typedef struct ACL_MASTER_SERV {
   * Structure of child process.
   */
 typedef int ACL_MASTER_PID;		/* pid is key into binhash table */
+typedef struct ACL_MASTER_PROC ACL_MASTER_PROC;
+typedef void (*SIGNAL_CALLBACK)(ACL_MASTER_PROC*, int, int, void*);
 
 typedef struct ACL_MASTER_PROC {
 	ACL_RING me;			/* linked in serv's children */
 	unsigned gen;			/* child generation number */
 	int      avail;			/* availability */
+	long     start;			/* start time of the process */
 	int      use_count;		/* number of service requests */
 	ACL_MASTER_PID   pid;		/* child process id */
 	ACL_MASTER_SERV *serv;		/* parent linkage */
+	SIGNAL_CALLBACK  signal_callback;
+	void            *signal_ctx;
 } ACL_MASTER_PROC;
 
  /*
@@ -132,7 +143,8 @@ extern ACL_MASTER_SERV *acl_var_master_head;
 extern ACL_EVENT *acl_var_master_global_event;
 extern void acl_master_service_init(void);
 extern void acl_master_service_start(ACL_MASTER_SERV *);
-extern void acl_master_service_stop(ACL_MASTER_SERV *);
+extern void acl_master_service_kill(ACL_MASTER_SERV *);
+extern void acl_master_service_stop(ACL_MASTER_SERV *serv);
 extern void acl_master_service_restart(ACL_MASTER_SERV *);
 
  /*
@@ -140,6 +152,7 @@ extern void acl_master_service_restart(ACL_MASTER_SERV *);
   */
 extern int acl_var_master_gotsighup;
 extern int acl_var_master_gotsigchld;
+extern int acl_var_master_stopped;
 extern void acl_master_sigsetup(void);
 
  /*
@@ -169,6 +182,7 @@ extern void acl_master_prefork(ACL_MASTER_SERV *);
   * master_avail.c
   */
 extern void acl_master_avail_listen(ACL_MASTER_SERV *);
+extern void acl_master_avail_listen_force(ACL_MASTER_SERV *);
 extern void acl_master_avail_cleanup(ACL_MASTER_SERV *);
 extern void acl_master_avail_more(ACL_MASTER_SERV *, ACL_MASTER_PROC *);
 extern void acl_master_avail_less(ACL_MASTER_SERV *, ACL_MASTER_PROC *);
@@ -180,12 +194,12 @@ extern struct ACL_BINHASH *acl_var_master_child_table;
 extern void acl_master_spawn_init(void);
 extern void acl_master_spawn(ACL_MASTER_SERV *);
 extern void acl_master_reap_child(void);
-extern void acl_master_delete_children(ACL_MASTER_SERV *);
+extern void acl_master_kill_children(ACL_MASTER_SERV *);
 extern void acl_master_delete_all_children(void);
 extern void acl_master_signal_children(ACL_MASTER_SERV *serv, int signum,
-		int *nchildren, int *nsignaled);
-extern void acl_master_sighup_children(ACL_MASTER_SERV *serv,
-		int *nchildren, int *nsignaled);
+		int *nchildren, int *nsignaled, SIGNAL_CALLBACK, void*);
+extern void acl_master_sighup_children(ACL_MASTER_SERV *serv, int *nchildren,
+		int *nsignaled, SIGNAL_CALLBACK callback, void *ctx);
 
  /*
   * master_warning.c

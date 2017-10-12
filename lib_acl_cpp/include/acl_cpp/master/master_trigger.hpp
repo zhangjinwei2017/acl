@@ -1,6 +1,8 @@
 #pragma once
 #include "master_base.hpp"
 
+struct ACL_VSTRING;
+
 namespace acl {
 
 /**
@@ -26,6 +28,12 @@ public:
 	 */
 	void run_alone(const char* path = NULL, int count = 1, int interval = 1);
 
+	/**
+	 * 获得配置文件路径
+	 * @return {const char*} 返回值为 NULL 表示没有设配置文件
+	 */
+	const char* get_conf_path(void) const;
+
 protected:
 	master_trigger();
 	virtual ~master_trigger();
@@ -49,7 +57,7 @@ private:
 	static void service_exit(void*);
 
 	// 当进程收到 SIGHUP 信号后会回调本函数
-	static void service_on_sighup(void*);
+	static int service_on_sighup(void*, ACL_VSTRING*);
 };
 
 }  // namespace acl

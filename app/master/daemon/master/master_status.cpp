@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <errno.h>
+#include <signal.h>
 #include <string.h>
 
 /* Application-specific. */
@@ -57,6 +58,7 @@ static void master_status_event(int type, ACL_EVENT *event acl_unused,
 		acl_msg_panic("%s(%d)->%s: fd = %d, read EOF status",
 			__FILE__, __LINE__, myname, serv->status_fd[0]);
 		/* NOTREACHED */
+		return;
 
 	default:
 		acl_msg_warn("%s(%d)->%s: service %s: child (pid %d) "
@@ -68,9 +70,9 @@ static void master_status_event(int type, ACL_EVENT *event acl_unused,
 	case sizeof(stat_buf):
 		pid = stat_buf.pid;
 		if (acl_msg_verbose)
-			acl_msg_info("%s: pid = %d, gen = %u, avail = %d, "
+			acl_msg_info("%s: pid = %d, gen = %u, status = %d, "
 				"fd = %d", myname, stat_buf.pid, stat_buf.gen,
-				stat_buf.avail, serv->status_fd[0]);
+				stat_buf.status, serv->status_fd[0]);
 	} /* end switch */
 
 	/*
@@ -90,7 +92,7 @@ static void master_status_event(int type, ACL_EVENT *event acl_unused,
 	{
 		acl_msg_warn("%s(%d)->%s: process id not found: pid = %d,"
 			 " status = %d, gen = %u", __FILE__, __LINE__,
-			 myname, stat_buf.pid, stat_buf.avail, stat_buf.gen);
+			 myname, stat_buf.pid, stat_buf.status, stat_buf.gen);
 		return;
 	}
 	if (proc->gen != stat_buf.gen) {
@@ -110,10 +112,10 @@ static void master_status_event(int type, ACL_EVENT *event acl_unused,
 	 * order. Otherwise, warn about weird status updates but do not take
 	 * action. It's all gossip after all.
 	 */
-	if (proc->avail == stat_buf.avail)
+	if (proc->avail == stat_buf.status)
 		return;
 
-	switch (stat_buf.avail) {
+	switch (stat_buf.status) {
 	case ACL_MASTER_STAT_AVAIL:
 		proc->use_count++;
 		acl_master_avail_more(serv, proc);
@@ -121,10 +123,19 @@ static void master_status_event(int type, ACL_EVENT *event acl_unused,
 	case ACL_MASTER_STAT_TAKEN:
 		acl_master_avail_less(serv, proc);
 		break;
+	case ACL_MASTER_STAT_SIGHUP_OK:
+	case ACL_MASTER_STAT_SIGHUP_ERR:
+		if (proc->signal_callback) {
+			proc->signal_callback(proc, SIGHUP,
+				stat_buf.status, proc->signal_ctx);
+			proc->signal_callback = NULL;
+			proc->signal_ctx      = NULL;
+		}
+		break;
 	default:
 		acl_msg_warn("%s(%d)->%s: ignoring unknown status: %d "
 			"allegedly from pid: %d", __FILE__, __LINE__,
-			myname, stat_buf.pid, stat_buf.avail);
+			myname, stat_buf.pid, stat_buf.status);
 		break;
 	}
 }

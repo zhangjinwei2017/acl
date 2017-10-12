@@ -16,8 +16,8 @@
 #endif
 
 struct ACL_MBOX {
-	ACL_VSTREAM *in;
-	ACL_VSTREAM *out;
+	ACL_SOCKET in;
+	ACL_SOCKET out;
 	size_t nsend;
 	size_t nread;
 	ACL_YPIPE *ypipe;
@@ -38,15 +38,14 @@ ACL_MBOX *acl_mbox_create(void)
 	}
 
 	mbox        = (ACL_MBOX *) acl_mymalloc(sizeof(ACL_MBOX));
-	mbox->in    = acl_vstream_fdopen(fds[0], O_RDONLY, sizeof(__key),
-			0, ACL_VSTREAM_TYPE_SOCK);
-	mbox->out   = acl_vstream_fdopen(fds[1], O_WRONLY, sizeof(__key),
-			0, ACL_VSTREAM_TYPE_SOCK);
+	mbox->in    = fds[0];
+	mbox->out   = fds[1];
 	mbox->nsend = 0;
 	mbox->nread = 0;
 	mbox->ypipe = acl_ypipe_new();
 	mbox->lock  = (acl_pthread_mutex_t *)
 		acl_mycalloc(1, sizeof(acl_pthread_mutex_t));
+
 	if (acl_pthread_mutex_init(mbox->lock, NULL) != 0)
 		acl_msg_fatal("%s(%d), %s: acl_pthread_mutex_init error",
 			__FILE__, __LINE__, __FUNCTION__);
@@ -56,8 +55,8 @@ ACL_MBOX *acl_mbox_create(void)
 
 void acl_mbox_free(ACL_MBOX *mbox, void (*free_fn)(void*))
 {
-	acl_vstream_close(mbox->in);
-	acl_vstream_close(mbox->out);
+	acl_socket_close(mbox->in);
+	acl_socket_close(mbox->out);
 	acl_ypipe_free(mbox->ypipe, free_fn);
 	acl_pthread_mutex_destroy(mbox->lock);
 	acl_myfree(mbox->lock);
@@ -77,13 +76,11 @@ int acl_mbox_send(ACL_MBOX *mbox, void *msg)
 
 	mbox->nsend++;
 
-	if (acl_vstream_writen(mbox->out, __key, sizeof(__key) - 1)
-		== ACL_VSTREAM_EOF)
-	{
+	ret = acl_socket_write(mbox->out, __key, sizeof(__key), 0, NULL, NULL);
+	if (ret == -1)
 		return -1;
-	} else
+	else
 		return 0;
-
 }
 
 void *acl_mbox_read(ACL_MBOX *mbox, int timeout, int *success)
@@ -99,24 +96,32 @@ void *acl_mbox_read(ACL_MBOX *mbox, int timeout, int *success)
 	}
 
 	mbox->nread++;
-	mbox->in->rw_timeout = timeout;
 
-	ret = acl_vstream_readn(mbox->in, kbuf, sizeof(kbuf) - 1);
-	if (ret == ACL_VSTREAM_EOF) {
-		if (mbox->in->errnum == ACL_ETIMEDOUT) {
+#ifdef ACL_UNIX
+	if (timeout >= 0 && acl_read_poll_wait(mbox->in, timeout) < 0)
+#else
+	if (timeout >= 0 && acl_read_select_wait(mbox->in, timeout) < 0)
+#endif
+	{
+		if (acl_last_error() == ACL_ETIMEDOUT) {
 			if (success)
 				*success = 1;
-			return NULL;
-		}
+		} else if (success)
+			*success = 0;
+		return NULL;
+	}
 
+	ret = acl_socket_read(mbox->in, kbuf, sizeof(kbuf), 0, NULL, NULL);
+	if (ret == -1) {
 		if (success)
 			*success = 0;
 		return NULL;
 	}
 
 	if (kbuf[0] != __key[0]) {
-		acl_msg_error("%s(%d), %s: read invalid: %c",
-			__FILE__, __LINE__, __FUNCTION__, kbuf[0]);
+		acl_msg_error("%s(%d), %s: read invalid, ch=%c, ascii=%d, "
+			"key=%c, ret=%d", __FILE__, __LINE__, __FUNCTION__,
+			kbuf[0], kbuf[0], __key[0], ret);
 		if (success)
 			*success = 0;
 		return NULL;
@@ -124,6 +129,7 @@ void *acl_mbox_read(ACL_MBOX *mbox, int timeout, int *success)
 
 	if (success)
 		*success = 1;
+
 	return acl_ypipe_read(mbox->ypipe);
 }
 

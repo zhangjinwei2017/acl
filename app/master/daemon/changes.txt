@@ -1,4 +1,24 @@
 
+8) 2017.9.22
+8.1) workaround: restructure the manage module of acl_master.
+
+7) 2017.9.9
+7.1) feature: master can wait callback from children when reloading the specific children
+
+6) 2017.9.5
+6.1) feature: master can wait children to exit with sync or async
+6.2) feature: master can kill SIGTERM children when reloading
+6.3) bugfix: master_params.cpp 中的 init_conf_str_vars 函数在 master reload 时
+有内存泄露
+
+5) 2017.8.11
+5.1) safety: master can't fatal for some configure error of any app service.
+
+4) 2017.7.7
+4.1) feature: master can stop or kill one service, stopping service is graceful
+by closing the IPC pipe, and killing service is rude by signal SIGTEM children.
+4.2) feature: add graceful stop API in master's web management interface.
+
 3) 2017.6.26
 3.1) protocol: changed the web management protocols.
 

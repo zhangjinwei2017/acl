@@ -3,6 +3,7 @@
 
 struct ACL_VSTREAM;
 struct ACL_EVENT;
+struct ACL_VSTRING;
 
 namespace acl {
 
@@ -34,7 +35,8 @@ public:
 	 *  且不会启动线程处理客户端请求
 	 * @return {bool} 监听是否成功
 	 *  注：count, threads_count 两个参数不再有效，将会使用配置文件中的
-	 *  配置值
+	 *  配置值 ioctl_use_limit(控制处理连接的个数) 及 ioctl_max_threads(
+	 *  控制启动的最大线程数)
 	 */
 	bool run_alone(const char* addrs, const char* path = NULL,
 		unsigned int count = 1, int threads_count = 1);
@@ -50,6 +52,12 @@ public:
 	 * @param stream {socket_stream*}
 	 */
 	void thread_disable_read(socket_stream* stream);
+
+	/**
+	 * 获得配置文件路径
+	 * @return {const char*} 返回值为 NULL 表示没有设配置文件
+	 */
+	const char* get_conf_path(void) const;
 
 protected:
 	// 该类不能直接被实例化
@@ -192,7 +200,7 @@ private:
 	static void thread_exit(void*);
 
 	// 当进程收到 SIGHUP 信号后会回调本函数
-	static void service_on_sighup(void*);
+	static int service_on_sighup(void*, ACL_VSTRING*);
 };
 
 } // namespace acl

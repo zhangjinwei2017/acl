@@ -129,9 +129,15 @@ static char         *__service_name;
 static char        **__service_argv;
 static void         *__service_ctx;
 static ACL_VSTREAM *__service_lock;
+static char         __conf_file[1024];
 
 static int      trigger_server_in_flow_delay;
 static unsigned trigger_server_generation;
+
+const char *acl_trigger_server_conf(void)
+{
+	return __conf_file;
+}
 
 ACL_EVENT *acl_trigger_server_event()
 {
@@ -410,9 +416,9 @@ void acl_trigger_server_main(int argc, char **argv, ACL_TRIGGER_SERVER_FN servic
 	int     c, socket_count = 1, key, fd, fdtype = 0;
 	char   *lock_path;
 	const char *root_dir = 0, *user_name = 0;
-	const char *transport = 0, *conf_file_ptr = 0;
+	const char *transport = 0;
 	ACL_VSTREAM *stream;
-	ACL_VSTRING *why;
+	ACL_VSTRING *why, *buf = acl_vstring_alloc(128);
 	ACL_WATCHDOG *watchdog;
 	char   *generation;
 
@@ -425,11 +431,13 @@ void acl_trigger_server_main(int argc, char **argv, ACL_TRIGGER_SERVER_FN servic
 	 * Pick up policy settings from master process. Shut up error messages to
 	 * stderr, because no-one is going to see them.
 	 */
-#ifdef ACL_UNIX
+#ifdef ACL_LINUX
 	opterr = 0;
 	optind = 0;
 	optarg = 0;
 #endif
+
+	__conf_file[0] = 0;
 
 	while ((c = getopt(argc, argv, "hcDl:n:s:t:uvf:")) > 0) {
 		switch (c) {
@@ -438,7 +446,7 @@ void acl_trigger_server_main(int argc, char **argv, ACL_TRIGGER_SERVER_FN servic
 			exit (0);
 		case 'f':
 			acl_app_conf_load(optarg);
-			conf_file_ptr = optarg;
+			snprintf(__conf_file, sizeof(__conf_file), "%s", optarg);
 			break;
 		case 'c':
 			root_dir = "setme";
@@ -450,6 +458,8 @@ void acl_trigger_server_main(int argc, char **argv, ACL_TRIGGER_SERVER_FN servic
 			if ((socket_count = atoi(optarg)) > 0)
 				break;
 			acl_msg_fatal("invalid socket_count: %s", optarg);
+			/* NOT REACHED */
+			break;
 		case 't':
 			transport = optarg;
 			break;
@@ -466,12 +476,12 @@ void acl_trigger_server_main(int argc, char **argv, ACL_TRIGGER_SERVER_FN servic
 
 	trigger_server_init(argv[0]);
 
-	if (conf_file_ptr == 0)
+	if (__conf_file[9] == 0)
 		acl_msg_fatal("%s(%d), %s: need \"-f pathname\"",
 			__FILE__, __LINE__, myname);
 	else if (acl_msg_verbose)
 		acl_msg_info("%s(%d), %s: configure file = %s",
-			__FILE__, __LINE__, myname, conf_file_ptr);
+			__FILE__, __LINE__, myname, __conf_file);
 
 	/*
 	 * Application-specific initialization.
@@ -678,6 +688,7 @@ void acl_trigger_server_main(int argc, char **argv, ACL_TRIGGER_SERVER_FN servic
 		(ACL_WATCHDOG_FN) 0, (char *) 0);
 
 	acl_server_sighup_setup();
+	acl_server_sigterm_setup();
 
 	/*
 	 * The event loop, at last.
@@ -704,13 +715,20 @@ void acl_trigger_server_main(int argc, char **argv, ACL_TRIGGER_SERVER_FN servic
 
 		acl_event_loop(__eventp);
 
-		if (acl_var_server_gotsighup) {
+		if (acl_var_server_gotsighup && __sighup_handler) {
 			acl_var_server_gotsighup = 0;
-			if (__sighup_handler)
-				__sighup_handler(__service_ctx);
+			if (__sighup_handler(__service_ctx, buf) < 0)
+				acl_master_notify(acl_var_trigger_pid,
+					trigger_server_generation,
+					ACL_MASTER_STAT_SIGHUP_ERR);
+			else
+				acl_master_notify(acl_var_trigger_pid,
+					trigger_server_generation,
+					ACL_MASTER_STAT_SIGHUP_OK);
 		}
 	}
 
+	acl_vstring_free(buf);
 	trigger_server_exit();
 }
 

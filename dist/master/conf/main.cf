@@ -37,3 +37,4 @@ scan_subdir = 0
 # limit_privilege = 0
 # acl_master 对外 WEB 管理接口地址
 #manage_addr = 127.0.0.1:8190
+manage_addr = {install_path}/var/public/master.sock

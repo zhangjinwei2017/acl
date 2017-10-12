@@ -121,6 +121,12 @@
     <ClCompile Include="src\stdlib\zlib_stream.cpp">
       <Filter>Source Files\stdlib</Filter>
     </ClCompile>
+    <ClCompile Include="src\stdlib\atomic.cpp">
+      <Filter>Source Files\stdlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stdlib\bitmap.cpp">
+      <Filter>Source Files\stdlib</Filter>
+    </ClCompile>
     <ClCompile Include="src\stdlib\charset_conv.cpp">
       <Filter>Source Files\stdlib</Filter>
     </ClCompile>
@@ -346,6 +352,24 @@
     <ClCompile Include="src\connpool\connect_pool.cpp">
       <Filter>Source Files\connpool</Filter>
     </ClCompile>
+    <ClCompile Include="src\connpool\tcp_reader.cpp">
+      <Filter>Source Files\connpool</Filter>
+    </ClCompile>
+    <ClCompile Include="src\connpool\tcp_sender.cpp">
+      <Filter>Source Files\connpool</Filter>
+    </ClCompile>
+    <ClCompile Include="src\connpool\tcp_client.cpp">
+      <Filter>Source Files\connpool</Filter>
+    </ClCompile>
+    <ClCompile Include="src\connpool\tcp_pool.cpp">
+      <Filter>Source Files\connpool</Filter>
+    </ClCompile>
+    <ClCompile Include="src\connpool\tcp_manager.cpp">
+      <Filter>Source Files\connpool</Filter>
+    </ClCompile>
+    <ClCompile Include="src\connpool\tcp_ipc.cpp">
+      <Filter>Source Files\connpool</Filter>
+    </ClCompile>
     <ClCompile Include="src\http\http_request_pool.cpp">
       <Filter>Source Files\http</Filter>
     </ClCompile>
@@ -367,6 +391,12 @@
     <ClCompile Include="src\stdlib\thread.cpp">
       <Filter>Source Files\stdlib</Filter>
     </ClCompile>
+    <ClCompile Include="src\stdlib\thread_cond.cpp">
+      <Filter>Source Files\stdlib</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stdlib\thread_mutex.cpp">
+      <Filter>Source Files\stdlib</Filter>
+    </ClCompile>
     <ClCompile Include="src\stdlib\thread_pool.cpp">
       <Filter>Source Files\stdlib</Filter>
     </ClCompile>
@@ -378,6 +408,9 @@
     </ClCompile>
     <ClCompile Include="src\stream\aio_timer_callback.cpp">
       <Filter>Source Files\stream</Filter>
+    </ClCompile>
+    <ClCompile Include="src\event\event_mutex.cpp">
+      <Filter>Source Files\event</Filter>
     </ClCompile>
     <ClCompile Include="src\event\event_timer.cpp">
       <Filter>Source Files\event</Filter>
@@ -747,6 +780,12 @@
     <ClInclude Include="include\acl_cpp\stdlib\zlib_stream.hpp">
       <Filter>Header Files\stdlib</Filter>
     </ClInclude>
+    <ClInclude Include="include\acl_cpp\stdlib\atomic.hpp">
+      <Filter>Header Files\stdlib</Filter>
+    </ClInclude>
+    <ClInclude Include="include\acl_cpp\stdlib\bitmap.hpp">
+      <Filter>Header Files\stdlib</Filter>
+    </ClInclude>
     <ClInclude Include="include\acl_cpp\stdlib\charset_conv.hpp">
       <Filter>Header Files\stdlib</Filter>
     </ClInclude>
@@ -900,6 +939,24 @@
     <ClInclude Include="include\acl_cpp\connpool\connect_pool.hpp">
       <Filter>Header Files\connpool</Filter>
     </ClInclude>
+    <ClInclude Include="include\acl_cpp\connpool\tcp_reader.hpp">
+      <Filter>Header Files\connpool</Filter>
+    </ClInclude>
+    <ClInclude Include="include\acl_cpp\connpool\tcp_sender.hpp">
+      <Filter>Header Files\connpool</Filter>
+    </ClInclude>
+    <ClInclude Include="include\acl_cpp\connpool\tcp_client.hpp">
+      <Filter>Header Files\connpool</Filter>
+    </ClInclude>
+    <ClInclude Include="include\acl_cpp\connpool\tcp_pool.hpp">
+      <Filter>Header Files\connpool</Filter>
+    </ClInclude>
+    <ClInclude Include="include\acl_cpp\connpool\tcp_manager.hpp">
+      <Filter>Header Files\connpool</Filter>
+    </ClInclude>
+    <ClInclude Include="include\acl_cpp\connpool\tcp_ipc.hpp">
+      <Filter>Header Files\connpool</Filter>
+    </ClInclude>
     <ClInclude Include="include\acl_cpp\http\http_request_pool.hpp">
       <Filter>Header Files\http</Filter>
     </ClInclude>
@@ -921,6 +978,12 @@
     <ClInclude Include="include\acl_cpp\stdlib\thread.hpp">
       <Filter>Header Files\stdlib</Filter>
     </ClInclude>
+    <ClInclude Include="include\acl_cpp\stdlib\thread_cond.hpp">
+      <Filter>Header Files\stdlib</Filter>
+    </ClInclude>
+    <ClInclude Include="include\acl_cpp\stdlib\thread_mutex.hpp">
+      <Filter>Header Files\stdlib</Filter>
+    </ClInclude>
     <ClInclude Include="include\acl_cpp\stdlib\thread_pool.hpp">
       <Filter>Header Files\stdlib</Filter>
     </ClInclude>
@@ -932,6 +995,9 @@
     </ClInclude>
     <ClInclude Include="include\acl_cpp\stream\aio_timer_callback.hpp">
       <Filter>Header Files\stream</Filter>
+    </ClInclude>
+    <ClInclude Include="include\acl_cpp\event\event_mutex.hpp">
+      <Filter>Header Files\event</Filter>
     </ClInclude>
     <ClInclude Include="include\acl_cpp\event\event_timer.hpp">
       <Filter>Header Files\event</Filter>
@@ -1048,6 +1114,9 @@
       <Filter>Header Files\disque</Filter>
     </ClInclude>
     <ClInclude Include="include\acl_cpp\stdlib\thread_queue.hpp">
+      <Filter>Header Files\stdlib</Filter>
+    </ClInclude>
+    <ClInclude Include="include\acl_cpp\stdlib\trigger.hpp">
       <Filter>Header Files\stdlib</Filter>
     </ClInclude>
     <ClInclude Include="include\acl_cpp\redis\redis_geo.hpp">

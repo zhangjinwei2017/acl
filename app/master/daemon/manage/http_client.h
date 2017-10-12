@@ -13,6 +13,8 @@
 #pragma once
 #include "json/serialize.h"
 
+class service_reload;
+
 class http_client
 {
 public:
@@ -20,35 +22,42 @@ public:
 
 	void wait(void);
 
-private:
-	~http_client(void);
-
-private:
-	acl::aio_socket_stream* client_;
-	ACL_ASTREAM*            conn_;
-	int                     rw_timeout_;
-	HTTP_HDR_REQ*           hdr_req_;
-	HTTP_REQ               *req_;
-	http_off_t              content_length_;
-	acl::json               json_;
-
-	void reset(void);
-	bool handle(void);
-	bool handle_list(void);
-	bool handle_stat(void);
-	bool handle_stop(void);
-	bool handle_start(void);
-	bool handle_reload(void);
-
-	void do_reply(int status, const acl::string& buf);
-
+public:
 	template<typename T>
 	void reply(int status, T& o)
 	{
 		acl::string buf;
 		serialize<T>(o, buf);
 		do_reply(status, buf);
+		buf.clear();
 	}
+
+	void on_finish(void);
+
+private:
+	~http_client(void);
+
+private:
+	ACL_ASTREAM*    conn_;
+	int             rw_timeout_;
+	HTTP_HDR_REQ*   hdr_req_;
+	HTTP_REQ*       req_;
+	http_off_t      content_length_;
+	acl::json       json_;
+
+public:
+	bool handle_list(void);
+	bool handle_stat(void);
+	bool handle_kill(void);
+	bool handle_stop(void);
+	bool handle_start(void);
+	bool handle_restart(void);
+	bool handle_reload(void);
+
+private:
+	void reset(void);
+	bool handle(void);
+	void do_reply(int status, const acl::string& buf);
 
 	static int on_head(int status, void* ctx);
 	static int on_body(int status, char* data, int dlen, void* ctx);

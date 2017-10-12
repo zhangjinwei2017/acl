@@ -28,9 +28,14 @@
 #include "stdlib/thread.hpp"
 #include "stdlib/thread_pool.hpp"
 #include "stdlib/thread_queue.hpp"
+#include "stdlib/thread_mutex.hpp"
+#include "stdlib/thread_cond.hpp"
 #include "stdlib/scan_dir.hpp"
 #include "stdlib/dbuf_pool.hpp"
 #include "stdlib/mbox.hpp"
+#include "stdlib/trigger.hpp"
+#include "stdlib/atomic.hpp"
+#include "stdlib/bitmap.hpp"
 
 #include "serialize/gsoner.hpp"
 
@@ -138,6 +143,7 @@
 #include "smtp/smtp_client.hpp"
 
 #include "event/event_timer.hpp"
+#include "event/event_mutex.hpp"
 
 #include "master/master_base.hpp"
 #include "master/master_threads.hpp"
@@ -155,6 +161,12 @@
 #include "connpool/connect_manager.hpp"
 #include "connpool/connect_monitor.hpp"
 #include "connpool/check_client.hpp"
+#include "connpool/tcp_client.hpp"
+#include "connpool/tcp_pool.hpp"
+#include "connpool/tcp_manager.hpp"
+#include "connpool/tcp_ipc.hpp"
+#include "connpool/tcp_sender.hpp"
+#include "connpool/tcp_reader.hpp"
 
 #include "redis/redis_client.hpp"
 #include "redis/redis_client_pool.hpp"

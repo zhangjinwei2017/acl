@@ -14,6 +14,7 @@ pid_t acl_var_master_pid;
 int   acl_var_master_in_flow_delay;
 int   acl_var_master_delay_sec;
 int   acl_var_master_delay_usec;
+int   acl_var_master_reload_timeo;
 
 static ACL_CONFIG_INT_TABLE int_tab[] = {
 	{ ACL_VAR_MASTER_PROC_LIMIT, ACL_DEF_MASTER_PROC_LIMIT,
@@ -30,6 +31,8 @@ static ACL_CONFIG_INT_TABLE int_tab[] = {
 		&acl_var_master_delay_sec, 0, 0 },
 	{ ACL_VAR_MASTER_DELAY_USEC, ACL_DEF_MASTER_DELAY_USEC,
 		&acl_var_master_delay_usec, 0, 0 },
+	{ ACL_VAR_MASTER_RELOAD_TIMEO, ACL_DEF_MASTER_RELOAD_TIMEO,
+		&acl_var_master_reload_timeo, 0, 0 },
 
 	{ 0, 0, 0, 0, 0 },
 };
@@ -42,6 +45,7 @@ char *acl_var_master_service_dir;
 char *acl_var_master_log_file;
 char *acl_var_master_pid_file;
 char *acl_var_master_manage_addr;
+char *acl_var_master_stop_kill;
 
 static ACL_CONFIG_STR_TABLE str_tab[] = {
 	{ ACL_VAR_MASTER_INET_INTERFACES, ACL_DEF_MASTER_INET_INTERFACES,
@@ -60,6 +64,8 @@ static ACL_CONFIG_STR_TABLE str_tab[] = {
 		&acl_var_master_pid_file },
 	{ ACL_VAR_MASTER_MANAGE_ADDR, ACL_DEF_MASTER_MANAGE_ADDR,
 		&acl_var_master_manage_addr },
+	{ ACL_VAR_MASTER_STOP_KILL, ACL_DEF_MASTER_STOP_KILL,
+		&acl_var_master_stop_kill },
 
 	{ 0, 0, 0 },
 };
@@ -89,12 +95,13 @@ static void init_conf_int_vars(ACL_CONFIG_INT_TABLE cit[])
 static void init_conf_str_vars(ACL_CONFIG_STR_TABLE cst[])
 {
 	int   i;
+	static int first_call = 1;
 
 	for (i = 0; cst[i].name != 0; i++) {
-		/*
-		if (*(cst[i].target) != 0)
+		if (first_call)
+			first_call = 0;
+		else if (*(cst[i].target) != 0)
 			acl_myfree(*(cst[i].target));
-		*/
 		*(cst[i].target) = acl_mystrdup(cst[i].defval);
 	}
 }

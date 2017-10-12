@@ -33,7 +33,7 @@ int     main(int argc, char **argv)
 {
 	ACL_VSTREAM  *lock_fp;
 	int           ch, fd, n, keep_mask = 0;
-	ACL_WATCHDOG *watchdog;
+	//ACL_WATCHDOG *watchdog;
 	ACL_VSTRING  *strbuf;
 	ACL_AIO      *aio;
 	char         *ptr;
@@ -188,19 +188,18 @@ int     main(int argc, char **argv)
 	 * multiple things at the same time, it really is all a single thread, so
 	 * that there are no concurrency conflicts within the master process.
 	 */
-	watchdog = acl_watchdog_create(1000, (ACL_WATCHDOG_FN) 0, (char *) 0);
+	//watchdog = acl_watchdog_create(1000, (ACL_WATCHDOG_FN) 0, (char *) 0);
 
 	for (;;) {
 #ifdef HAS_VOLATILE_LOCKS
 		if (acl_myflock(ACL_VSTREAM_FILE(lock_fp), ACL_INTERNAL_LOCK,
-			ACL_FLOCK_OP_EXCLUSIVE) < 0)
-		{
+			ACL_FLOCK_OP_EXCLUSIVE) < 0) {
+
 			acl_msg_fatal("refresh exclusive lock: %m");
 		}
 #endif
 
-		if (0)
-		acl_watchdog_start(watchdog);  /* same as trigger servers */
+		//acl_watchdog_start(watchdog);  /* same as trigger servers */
 
 		acl_event_loop(acl_var_master_global_event);
 		aio = manager::get_instance().get_aio();
@@ -218,5 +217,17 @@ int     main(int argc, char **argv)
 			acl_var_master_gotsigchld = 0;  /* this first */
 			acl_master_reap_child();        /* then this */
 		}
+		if (acl_var_master_stopped)
+			break;
 	}
+
+#define EQ	!strcasecmp
+
+	if (EQ(acl_var_master_stop_kill, "true")
+		|| EQ(acl_var_master_stop_kill, "yes")
+		|| EQ(acl_var_master_stop_kill, "on")) {
+
+		acl_master_delete_all_children();
+	}
+	return 0;
 }

@@ -1,40 +1,49 @@
 CC      = g++
 
-CFLAGS = -c -g -W -Wall -Wcast-qual -Wcast-align \
+CFLAGS = -c -g -W -Wall -Wcast-qual \
 -Wno-long-long \
 -Wpointer-arith -Werror -Wshadow -O3 \
 -D_REENTRANT -D_POSIX_PTHREAD_SEMANTICS -D_USE_FAST_MACRO
-
+#-Wcast-align
 ###########################################################
 #Check system:
 #       Linux, SunOS, Solaris, BSD variants, AIX, HP-UX
 SYSLIB = -lpthread -lz
 CHECKSYSRES = @echo "Unknow system type!";exit 1
-UNIXNAME = $(shell uname -sm)
+OSNAME = $(shell uname -s)
+OSTYPE = $(shell uname -m)
 
 ifeq ($(CC),)
         CC = gcc
 endif
 
 # For FreeBSD
-ifeq ($(findstring FreeBSD, $(UNIXNAME)), FreeBSD)
+ifeq ($(findstring FreeBSD, $(OSNAME)), FreeBSD)
 	ifeq ($(findstring gcc, $(CC)), gcc)
 		CFLAGS += -Wstrict-prototypes
 	endif
 	CFLAGS += -DFREEBSD -D_REENTRANT
 	SYSLIB = -lcrypt -lpthread
+	RPATH = freebsd
 endif
 
 # For Darwin
-ifeq ($(findstring Darwin, $(UNIXNAME)), Darwin)
+ifeq ($(findstring Darwin, $(OSNAME)), Darwin)
 	CFLAGS += -DMACOSX -Wno-invalid-source-encoding \
 		  -Wno-extended-offsetof
 	UNIXTYPE = MACOSX
+	RPATH = macos
 	SYSLIB +=  -liconv -rdynamic
 endif
 
 #Path for Linux
-ifeq ($(findstring Linux, $(UNIXNAME)), Linux)
+ifeq ($(findstring Linux, $(OSNAME)), Linux)
+	ifeq ($(findstring i686, $(OSTYPE)), i686)
+		RPATH = linux32
+	endif
+	ifeq ($(findstring x86_64, $(OSTYPE)), x86_64)
+		RPATH = linux64
+	endif
 	ifeq ($CC, "gcc")
 		CFLAGS += -Wstrict-prototypes
 	endif
@@ -43,35 +52,38 @@ ifeq ($(findstring Linux, $(UNIXNAME)), Linux)
 endif
 
 # For MINGW
-ifeq ($(findstring MINGW, $(UNIXNAME)), MINGW)
+ifeq ($(findstring MINGW, $(OSNAME)), MINGW)
 	SYSLIB = -lpthread-2 -liconv -lz
 	CFLAGS += -DLINUX2 -DMINGW
 	UNIXTYPE = LINUX
+	RPATH = mingw
 endif
 
 # For MSYS
-ifeq ($(findstring MSYS, $(UNIXNAME)), MSYS)
+ifeq ($(findstring MSYS, $(OSNAME)), MSYS)
 	SYSLIB = -lpthread-2 -liconv -lz
 	CFLAGS += -DLINUX2 -DMINGW
 	UNIXTYPE = LINUX
+	RPATH = msys
 endif
 
 #Path for SunOS
-ifeq ($(findstring SunOS, $(UNIXNAME)), SunOS)
-	ifeq ($(findstring 86, $(UNIXNAME)), 86)
+ifeq ($(findstring SunOS, $(OSNAME)), SunOS)
+	ifeq ($(findstring 86, $(OSTYPE)), 86)
 		SYSLIB += -lsocket -lnsl -lrt
 	endif
-	ifeq ($(findstring sun4u, $(UNIXNAME)), sun4u)
+	ifeq ($(findstring sun4u, $(OSTYPE)), sun4u)
 		SYSLIB += -lsocket -lnsl -lrt
 	endif
 	ifeq ($CC, "gcc")
 		CFLAGS += -Wstrict-prototypes
 	endif
+	RPATH = sunos5_x86
 	CFLAGS += -DSUNOS5 -D_REENTRANT
 endif
 
 #Path for HP-UX
-ifeq ($(findstring HP-UX, $(UNIXNAME)), HP-UX)
+ifeq ($(findstring HP-UX, $(OSNAME)), HP-UX)
 	ifeq ($CC, "gcc")
 		CFLAGS += -Wstrict-prototypes
 	endif
@@ -130,8 +142,13 @@ all: RM $(OBJ)
 	@echo ""
 RM:
 	rm -f $(PROG)
-clean:
+clean cl:
 	rm -f $(PROG)
 	rm -f $(OBJ)
 rebuild rb: clean all
+install:
+	@mkdir -p ../../../dist/master/libexec/$(RPATH)
+	@mkdir -p ../../../dist/master/conf
+	cp $(PROG) ../../../dist/master/libexec/$(RPATH)/
+	cp main.cf ../../../dist/master/conf/service/
 ###########################################################

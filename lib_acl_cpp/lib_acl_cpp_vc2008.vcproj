@@ -42,7 +42,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories=".\include;..\lib_acl\include;..\lib_protocol\include;..\include\sqlite;..\include\zlib;..\include\mysql;..\include\pgsql;..\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL"
+				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;HAS_POLARSSL_DLL"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -111,7 +111,7 @@
 				EnableIntrinsicFunctions="true"
 				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories=".\include;..\lib_acl\include;..\lib_protocol\include;..\include\sqlite;..\include\zlib;..\include\mysql;..\include\pgsql;..\include;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;HAS_POLARSSL_DLL"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="2"
@@ -176,7 +176,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories=".\include;..\lib_acl\include;..\lib_protocol\include;..\include\sqlite;..\include\zlib;..\include\mysql;..\include\pgsql;..\include;"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;ACL_DLL;ACL_CPP_DLL;ACL_CPP_EXPORTS;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL"
+				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;ACL_DLL;ACL_CPP_DLL;ACL_CPP_EXPORTS;USE_WIN_ICONV;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;HAS_POLARSSL_DLL"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -255,7 +255,7 @@
 				EnableIntrinsicFunctions="true"
 				WholeProgramOptimization="false"
 				AdditionalIncludeDirectories=".\include;..\lib_acl\include;..\lib_protocol\include;..\include\sqlite;..\include\zlib;..\include\mysql;..\include\pgsql;..\include;"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;USE_WIN_ICONV;ACL_DLL;ACL_CPP_DLL;ACL_CPP_EXPORTS;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;USE_WIN_ICONV;ACL_DLL;ACL_CPP_DLL;ACL_CPP_EXPORTS;HAS_MYSQL_DLL;HAS_SQLITE_DLL;HAS_ZLIB_DLL;HAS_PGSQL_DLL;HAS_POLARSSL_DLL"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="2"
@@ -401,6 +401,30 @@
 					RelativePath=".\src\connpool\connect_pool.cpp"
 					>
 				</File>
+				<File
+					RelativePath=".\src\connpool\tcp_reader.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\connpool\tcp_sender.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\connpool\tcp_client.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\connpool\tcp_pool.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\connpool\tcp_manager.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\connpool\tcp_ipc.cpp"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="db"
@@ -477,6 +501,10 @@
 			<Filter
 				Name="event"
 				>
+				<File
+					RelativePath=".\src\event\event_mutex.cpp"
+					>
+				</File>
 				<File
 					RelativePath=".\src\event\event_timer.cpp"
 					>
@@ -946,6 +974,14 @@
 				Name="stdlib"
 				>
 				<File
+					RelativePath=".\src\stdlib\atomic.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\stdlib\bitmap.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\src\stdlib\charset_conv.cpp"
 					>
 				</File>
@@ -1007,6 +1043,14 @@
 				</File>
 				<File
 					RelativePath=".\src\stdlib\thread.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\stdlib\thread_cond.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\stdlib\thread_mutex.cpp"
 					>
 				</File>
 				<File
@@ -1247,6 +1291,30 @@
 					RelativePath=".\include\acl_cpp\connpool\connect_pool.hpp"
 					>
 				</File>
+				<File
+					RelativePath=".\include\acl_cpp\connpool\tcp_reader.hpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\acl_cpp\connpool\tcp_sender.hpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\acl_cpp\connpool\tcp_client.hpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\acl_cpp\connpool\tcp_pool.hpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\acl_cpp\connpool\tcp_manager.hpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\acl_cpp\connpool\tcp_ipc.hpp"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="db"
@@ -1323,6 +1391,10 @@
 			<Filter
 				Name="event"
 				>
+				<File
+					RelativePath=".\include\acl_cpp\event\event_mutex.hpp"
+					>
+				</File>
 				<File
 					RelativePath=".\include\acl_cpp\event\event_timer.hpp"
 					>
@@ -1692,6 +1764,14 @@
 				Name="stdlib"
 				>
 				<File
+					RelativePath=".\include\acl_cpp\stdlib\atomic.hpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\acl_cpp\stdlib\bitmap.hpp"
+					>
+				</File>
+				<File
 					RelativePath=".\include\acl_cpp\stdlib\charset_conv.hpp"
 					>
 				</File>
@@ -1768,11 +1848,23 @@
 					>
 				</File>
 				<File
+					RelativePath=".\include\acl_cpp\stdlib\thread_cond.hpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\acl_cpp\stdlib\thread_mutex.hpp"
+					>
+				</File>
+				<File
 					RelativePath=".\include\acl_cpp\stdlib\thread_pool.hpp"
 					>
 				</File>
 				<File
 					RelativePath=".\include\acl_cpp\stdlib\thread_queue.hpp"
+					>
+				</File>
+				<File
+					RelativePath=".\include\acl_cpp\stdlib\trigger.hpp"
 					>
 				</File>
 				<File

@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
-#include <stdarg.h>
-#include <syslog.h>
 #include <errno.h>
 #include <string.h>
 
@@ -69,11 +67,10 @@ static void master_throttle(ACL_MASTER_SERV *serv)
 	/*
 	 * Perhaps the command to be run is defective,
 	 * perhaps some configuration is wrong, or
-	 * perhaps the system is out of resources. Disable further
-	 * process creation attempts for a while.
+	 * perhaps the system is out of resources.
+	 * Disable further process creation attempts for a while.
 	 */
 	if ((serv->flags & ACL_MASTER_FLAG_THROTTLE) == 0) {
-
 		serv->flags |= ACL_MASTER_FLAG_THROTTLE;
 		acl_event_request_timer(acl_var_master_global_event,
 			master_unthrottle_wrapper, (void *) serv,
@@ -197,7 +194,7 @@ void    acl_master_spawn(ACL_MASTER_SERV *serv)
 	        serv->flags &= ~ACL_MASTER_FLAG_RELOADING;
 
 	if (serv->flags & ACL_MASTER_FLAG_THROTTLE)
-		acl_msg_panic("%s(%d)-%s: throttled service: %s",
+		acl_msg_warn("%s(%d)-%s: throttled service: %s",
 			__FILE__, __LINE__, myname, serv->path);
 
 	/*
@@ -237,16 +234,21 @@ void    acl_master_spawn(ACL_MASTER_SERV *serv)
 		if (acl_msg_verbose)
 			acl_msg_info("spawn cmd %s pid %d", serv->path, pid);
 		proc = (ACL_MASTER_PROC *) acl_mycalloc(1, sizeof(ACL_MASTER_PROC));
-		proc->serv = serv;
-		proc->pid = pid;
-		proc->gen = master_generation;
+		proc->serv      = serv;
+		proc->pid       = pid;
+		proc->gen       = master_generation;
+		proc->avail     = 0;
+		proc->start     = (long) time(NULL);
 		proc->use_count = 0;
-		proc->avail = 0;
+		proc->signal_callback = NULL;
+		proc->signal_ctx      = NULL;
+
 		acl_binhash_enter(acl_var_master_child_table,
 			(char *) &pid, sizeof(pid), (char *) proc);
 		acl_ring_prepend(&serv->children, &proc->me);
 		serv->total_proc++;
 		acl_master_avail_more(serv, proc);
+
 		if (serv->flags & ACL_MASTER_FLAG_CONDWAKE) {
 			serv->flags &= ~ACL_MASTER_FLAG_CONDWAKE;
 			acl_master_wakeup_init(serv);
@@ -316,7 +318,6 @@ void    acl_master_reap_child(void)
 	while ((pid = waitpid((pid_t) - 1, &status, WNOHANG)) > 0) {
 		if (acl_msg_verbose)
 			acl_msg_info("%s: pid %d", myname, pid);
-
 		proc = (ACL_MASTER_PROC *) acl_binhash_find(
 			acl_var_master_child_table, &pid, sizeof(pid));
 		if (proc == NULL) {
@@ -364,11 +365,14 @@ void    acl_master_reap_child(void)
 		}
 
 		if (proc->use_count == 0
-		    && (serv->flags & ACL_MASTER_FLAG_THROTTLE) == 0) {
+		    && WTERMSIG(status) != SIGTERM
+		    && !ACL_MASTER_THROTTLED(serv)
+		    && !ACL_MASTER_STOPPING(serv)
+		    && !ACL_MASTER_KILLED(serv)) {
 
 			acl_msg_warn("%s(%d), %s: bad command startup, path=%s"
-				" -- throttling", __FILE__, __LINE__,
-				myname, serv->path);
+				" -- throttling, signale=%d", __FILE__,
+				__LINE__, myname, serv->path, WTERMSIG(status));
 			master_throttle(serv);
 		}
 
@@ -376,20 +380,36 @@ void    acl_master_reap_child(void)
 	}
 }
 
-/* acl_master_delete_children - delete all child processes of service */
+#define WAITING_CHILD	100000
 
-void    acl_master_delete_children(ACL_MASTER_SERV *serv)
+static void waiting_children(int type acl_unused, ACL_EVENT *event, void* ctx)
+{
+	ACL_MASTER_SERV *serv = (ACL_MASTER_SERV *) ctx;
+
+	acl_master_reap_child();
+
+	if (ACL_MASTER_CHILDREN_SIZE(serv) > 0) {
+		acl_msg_info("wait for service %s, total_proc=%d, %d",
+			serv->conf, serv->total_proc,
+			ACL_MASTER_CHILDREN_SIZE(serv));
+		acl_event_request_timer(event, waiting_children,
+			(void *) serv, WAITING_CHILD, 0);
+	} else {
+		acl_msg_info("%s(%d): free service %s been %s, total proc=%d",
+			__FUNCTION__, __LINE__, serv->path,
+			ACL_MASTER_STOPPING(serv) ? "stopped" : "killed",
+			serv->total_proc);
+		acl_master_ent_free(serv);
+        }
+}
+
+/* acl_master_kill_children - kill and delete all child processes of service */
+
+void    acl_master_kill_children(ACL_MASTER_SERV *serv)
 {
 	ACL_BINHASH_INFO **list;
 	ACL_BINHASH_INFO **info;
-	ACL_MASTER_PROC *proc;
-
-	/*
-	 * XXX turn on the throttle so that master_reap_child() doesn't.
-	 * Someone has to turn off the throttle in order to stop the
-	 * associated timer request, so we might just as well do it at the end.
-	 */
-	master_throttle(serv);
+	ACL_MASTER_PROC   *proc;
 
 	info = list = acl_binhash_list(acl_var_master_child_table);
 	for (; *info; info++) {
@@ -397,12 +417,39 @@ void    acl_master_delete_children(ACL_MASTER_SERV *serv)
 		if (proc->serv == serv)
 			(void) kill(proc->pid, SIGTERM);
 	}
+	acl_myfree(list);
 
-	while (serv->total_proc > 0)
+	if ((serv->flags & ACL_MASTER_FLAG_STOP_WAIT) != 0) {
+		while (serv->total_proc > 0) {
+			acl_master_reap_child();
+			if (serv->total_proc > 0)
+				acl_doze(100);
+		}
+
+		acl_msg_info("%s(%d): free service %s been %s, total proc=%d",
+			__FUNCTION__, __LINE__, serv->path,
+			ACL_MASTER_STOPPING(serv) ? "stopped" : "killed",
+			serv->total_proc);
+
+		acl_master_ent_free(serv);
+		return;
+	}
+
+	// try waiting children to exit
+	if (serv->total_proc > 0)
 		acl_master_reap_child();
 
-	acl_myfree(list);
-	master_unthrottle(serv);
+	// if there are some other children existing, create a timer to wait
+	if (serv->total_proc > 0)
+		acl_event_request_timer(acl_var_master_global_event,
+			waiting_children, (void *) serv, WAITING_CHILD, 0);
+	else {
+		acl_msg_info("%s(%d): free service %s been %s, total proc=%d",
+			__FUNCTION__, __LINE__, serv->path,
+			ACL_MASTER_STOPPING(serv) ? "stopped" : "killed",
+			serv->total_proc);
+		acl_master_ent_free(serv);
+	}
 }
 
 void   acl_master_delete_all_children(void)
@@ -411,13 +458,12 @@ void   acl_master_delete_all_children(void)
 
 	for (servp = &acl_var_master_head; (serv = *servp) != 0;) {
 		*servp = serv->next;
-		acl_master_service_stop(serv);
-		acl_master_ent_free(serv);
+		acl_master_service_kill(serv);
 	}
 }
 
 void    acl_master_signal_children(ACL_MASTER_SERV *serv, int signum,
-		int *nchildren, int *nsignaled)
+	int *nchildren, int *nsignaled, SIGNAL_CALLBACK callback, void *ctx)
 {
 	const char *myname = "acl_master_signal_children";
 	ACL_RING_ITER    iter;
@@ -427,25 +473,32 @@ void    acl_master_signal_children(ACL_MASTER_SERV *serv, int signum,
 	acl_ring_foreach(iter, &serv->children) {
 		proc = acl_ring_to_appl(iter.ptr, ACL_MASTER_PROC, me);
 		acl_assert(proc);
+
+		// setup callback first
+		proc->signal_callback = callback;
+		proc->signal_ctx      = ctx;
+		if (nchildren)
+			(*nchildren)++;
+
 		if (kill(proc->pid, signum) < 0)
 			acl_msg_warn("%s: kill child %d, path %s error %s",
 				myname, proc->pid, serv->path, strerror(errno));
 		else
+		{
+			if (nsignaled)
+				(*nsignaled)++;
 			n++;
+		}
 	}
-
-	if (nchildren)
-		*nchildren = acl_ring_size(&serv->children);
-	if (nsignaled)
-		*nsignaled = n;
 
 	acl_msg_info("%s: service %s, path %s, signal %d, children %d,"
 		" signaled %d", myname, serv->name, serv->path,
 		signum, acl_ring_size(&serv->children), n);
 }
 
-void    acl_master_sighup_children(ACL_MASTER_SERV *serv,
-		int *nchildren, int *nsignaled)
+void    acl_master_sighup_children(ACL_MASTER_SERV *serv, int *nchildren,
+	int *nsignaled, SIGNAL_CALLBACK callback, void *ctx)
 {
-	acl_master_signal_children(serv, SIGHUP, nchildren, nsignaled);
+	acl_master_signal_children(serv, SIGHUP, nchildren, nsignaled,
+		callback, ctx);
 }
